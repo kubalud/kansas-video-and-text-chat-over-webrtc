@@ -72,7 +72,7 @@ let socket = io.connect('http://localhost'); // TODO change on deploy
 
 // setting user media
 navigator.mediaDevices.getUserMedia({
-    audio: false,
+    audio: true,
     video: true
 }).then((stream) => {
     localVideoElement.srcObject = localStream = stream;
