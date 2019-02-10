@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", 'http://localhost:3000/verification', true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+              window.location.href = xhr.responseURL;
+            }
+        }
+        xhr.send(`email=${localStorage.getItem('kansas-email')}&jwt=${localStorage.getItem('kansas-jwt')}`);
+    </script>
+  </head>
+</html>

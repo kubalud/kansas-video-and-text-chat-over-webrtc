@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Kansas Chat App</title>
+    <link rel="stylesheet" href="assets/stylesheets/base.css">
+    <link rel="stylesheet" href="assets/stylesheets/chat.css">
+		<link rel="stylesheet"
+			href="https://use.fontawesome.com/releases/v5.7.0/css/all.css"
+			integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ"
+			crossorigin="anonymous">
+  </head>
+  <body>
+    <div id="kc-navigation">
+			<div id="kc-navigation__toolbar">
+        <span id="kc-navigation__toolbar--left-span" class="hidden" data-kc-navigation__toolbar--left-span>
+          <button data-kc-leave-room-button>
+            <i class="fas fa-user-times"></i>
+            Leave room
+          </button>
+        </span>
+        <span id="kc-navigation__toolbar--right-span">
+          <form method="post" action="/logout">
+            <button type="submit" data-kc-logout--button>
+              Logout
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </form>
+        </span>
+      </div>
+      <div id="kc-navigation__main" data-kc-navigation__main>
+        <h1>Enter room</h1>
+        <input data-kc-room-input autocomplete="off" />
+        <button data-kc-room-entry-button class="btn btn-primary btn-block btn-large">
+          Enter
+        </button>
+      </div>
+    </div>
+    <div id="kc-chat" data-kc-chat class="hidden">
+      <div id="kc-chat__room-name">
+        <h1 data-kc-chat__room-name--h1></h1>
+      </div>
+      <div id="kc-chat__new-message"">
+        <input data-kc-chat__new-message--input autocomplete="off" />
+        <button data-kc-chat__new-message--button class="btn btn-primary btn-block btn-large">
+          Send
+        </button>
+      </div>
+      <div id="kc-chat__message-list" data-kc-chat__message-list class="hidden">
+        <ul data-kc-chat__message-list--ul></ul>
+      </div>
+    </div>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+    <script src="assets/scripts/chat.js"></script>
+  </body>
+</html>

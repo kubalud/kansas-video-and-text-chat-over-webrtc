@@ -1,0 +1,37 @@
+{
+  "name": "kansas-liquid-chat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "watch:sass": "node node_modules/gulp/bin/gulp sass & node node_modules/gulp/bin/gulp watch:sass"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kubalud/kansas-liquid-chat.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kubalud/kansas-liquid-chat/issues"
+  },
+  "homepage": "https://github.com/kubalud/kansas-liquid-chat#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "jsonwebtoken": "^8.4.0",
+    "mongoose": "^5.4.8",
+    "passport": "^0.4.0",
+    "passport-local": "^1.0.0",
+    "passport.socketio": "^3.7.0",
+    "socket.io": "1.7.3",
+    "socketio-auth": "^0.1.1"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.0",
+    "gulp-sass": "^4.0.2",
+    "gulp-watch": "^5.0.1",
+    "prompt": "^1.0.0"
+  }
+}

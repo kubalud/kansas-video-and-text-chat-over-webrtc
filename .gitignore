@@ -1,0 +1,6 @@
+node_modules
+secret.json
+log.txt
+yarn-error.log
+public/assets/stylesheets/**/*.css
+.vscode

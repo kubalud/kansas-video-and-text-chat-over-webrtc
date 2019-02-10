@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" >
+	<head>
+		<meta charset="UTF-8">
+		<title>Kansas Document App</title>
+
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/prefixfree/1.0.7/prefixfree.min.js"></script>
+
+		<link rel="stylesheet"
+			href="https://use.fontawesome.com/releases/v5.7.0/css/all.css"
+			integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ"
+			crossorigin="anonymous">
+
+		<link rel="stylesheet" href="assets/stylesheets/base.css">
+	</head>
+	<body>
+		<div id="kc-navigation">
+			<div id="kc-navigation__toolbar">
+				<span id="kc-navigation__toolbar--left-span">
+					<form method="get" action="/login">
+						<button type="submit">
+							<i class="fas fa-chevron-left"></i>
+							Back to login
+						</button>
+					</form>
+				</span>
+			</div>
+			<div id="kc-navigation__main">
+				<h1 class="retry">
+					Invalid user.<br>
+					Try again.
+				</h1>
+				<form method="post" action="/login">
+					<input type="text" name="email" placeholder="Email" required="required" />
+					<input type="password" name="password" placeholder="Password" required="required" />
+					<button type="submit" class="btn btn-primary btn-block btn-large">
+						Login
+					</button>
+				</form>
+			</div>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,17 @@
+{
+    "port": "27017",
+    "name": "liquid",
+    "documents": {
+        "passwords": {
+            "digest": "sha512",
+            "keylen": 64,
+            "iterations": 1000,
+            "saltByteSize": 16
+        },
+        "versionKey": "versionKey"
+    },
+    "passportUsernameField": "email",
+    "models": {
+        "user": "User"
+    }
+}
