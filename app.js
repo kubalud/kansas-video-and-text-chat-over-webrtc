@@ -121,7 +121,7 @@ let prompt = require('./services/prompt');
                     return callback(new Error("DB error"));
                 } else if (found) {
                     logger(
-                        consoleConfig.messages.success.userAuthenticated(found),
+                        consoleConfig.messages.success.userAuthenticated(found, socket.id),
                         consoleConfig.colors.success
                     );
                     return callback(null, true);
@@ -171,15 +171,52 @@ let prompt = require('./services/prompt');
     });
 
     io.on('connection', (socket) => {
+        logger(
+            `User '${socket.id}' connected`,
+            consoleConfig.colors.info
+        );
+
         socket.on('enter room', (roomName) => {
+            logger(
+                `User '${socket.id}' entered the rooom '${roomName}'. Informing the room attendants and callbacking.`,
+                consoleConfig.colors.info
+            );
             socket.join(roomName);
             socket.emit('room entered', roomName);
             io.to(roomName).emit('new peer joined', socket.id, socket.client.user.email);
         });
 
         socket.on('leave room', (roomName) => {
+            logger(
+                `User ${socket.id} left the rooom '${roomName}'. Callbacking.'`,
+                consoleConfig.colors.info
+            );
             socket.leave(roomName);
             socket.emit('room left', roomName);
+        });
+
+        socket.on('answer', (message, targetId) => {
+            logger(
+                `User '${socket.id}' answering to user's '${targetId}' offer.`,
+                consoleConfig.colors.info
+            );
+            io.to(targetId).emit('answered', message, socket.id);
+        });
+
+        socket.on('offer', (message, targetId) => {
+            logger(
+                `User '${socket.id}' offering WebRTC connection to user '${targetId}'.`,
+                consoleConfig.colors.info
+            );
+            io.to(targetId).emit('offered', message, socket.id, socket.client.user.email);
+        });
+
+        socket.on('send candidate', (message, socketId) => {
+            logger(
+                `User '${socket.id}' sending an ICE candidate to user '${socketId}'.`,
+                consoleConfig.colors.info
+            );
+            io.to(socketId).emit('candidate sent', message, socket.id);
         });
 
         socket.on('send message', (roomName, msg) => {
@@ -188,34 +225,25 @@ let prompt = require('./services/prompt');
             }
         });
 
-        socket.on('ipaddr', function() {
-            var ifaces = os.networkInterfaces();
-            for (var dev in ifaces) {
-            ifaces[dev].forEach(function(details) {
-                if (details.family === 'IPv4' && details.address !== '127.0.0.1') {
-                    socket.emit('ipaddr', details.address);
-                }
-            });
-            }
-        });
-
-        socket.on('send metadata', (body, roomName) => {
-            if (body === 'bye') {
-                io.to(roomName).emit('bye sent', socket.id);
-            }
+        socket.on('send bye', (roomName) => {
+            logger(
+                `User '${socket.id}' left the room '${roomName}'. Informing the room attendants.`,
+                consoleConfig.colors.info
+            );
+            io.to(roomName).emit('bye sent', socket.id);
         });
     });
 
-    (function roomNews() {
-        setTimeout(() => {
-            logger(
-                consoleConfig.messages.info.activeRooms
-                    + JSON.stringify(io.sockets.adapter.rooms),
-                consoleConfig.colors.info
-            );
-            roomNews();
-        }, 10000)
-    })();
+    // (function roomNews() {
+    //     setTimeout(() => {
+    //         logger(
+    //             consoleConfig.messages.info.activeRooms
+    //                 + JSON.stringify(io.sockets.adapter.rooms),
+    //             consoleConfig.colors.info
+    //         );
+    //         roomNews();
+    //     }, 10000)
+    // })();
 
     http.listen(port, () => {
         logger(

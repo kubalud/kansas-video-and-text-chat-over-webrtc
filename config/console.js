@@ -46,7 +46,7 @@ module.exports = {
         },
         success: {
             userAutoConnected: (user) => `User ${user.email} has been verified automatically via jwt/email.`,
-            userAuthenticated: (user) => `User ${user.email} has created an authenticated websocket connection.`,
+            userAuthenticated: (user, id) => `User ${user.email} has created an authenticated websocket connection with id ${id}.`,
             userCreatedAndLoggedIn: (user) => `User ${user.email} has just been created and logged in.`,
             userLoggedIn: (user) => `User ${user.email} has just logged in.`
         },
