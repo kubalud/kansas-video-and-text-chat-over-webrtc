@@ -27,13 +27,13 @@ if (location.hostname !== 'localhost') {
 let currentRoom = '';
 let connections = {};
 
-var isChannelReady = false;
-var isInitiator = false;
-var isStarted = false;
-var localStream;
-var turnReady;
+let isChannelReady = false;
+let isInitiator = false;
+let isStarted = false;
+let localStream;
+let turnReady;
 
-var socket = io.connect('http://localhost'); // TODO change on deploy
+let socket = io.connect('http://localhost'); // TODO change on deploy
 
 // login persistence
     // grab from url
@@ -46,8 +46,8 @@ var socket = io.connect('http://localhost'); // TODO change on deploy
 
 // element hooks
     // videos
-    var localVideo = document.querySelector('[data-kc-videos__local--video]');
-    var remoteVideosWrapper = document.querySelector('[data-kc-videos__remote]');
+    let localVideoElement = document.querySelector('[data-kc-videos__local--video]');
+    let remoteVideosWrapper = document.querySelector('[data-kc-videos__remote]');
 
     // inside room
     let leaveRoomButtonWrapperElement = document.querySelector('[data-kc-navigation__toolbar--left-span]');
@@ -74,12 +74,20 @@ navigator.mediaDevices.getUserMedia({
     audio: false,
     video: true
 }).then((stream) => {
-    console.log('Adding local stream.');
-    localStream = stream;
-    localVideo.srcObject = stream;
+    localVideoElement.srcObject = localStream = stream;
 }).catch(function(e) {
     console.log('getUserMedia() error: ' + e.name);
 });
+
+function setLocalAndSendMessage(sessionDescription) {
+    pc.setLocalDescription(sessionDescription);
+    console.log('setLocalAndSendMessage sending message', sessionDescription);
+    sendMessage(sessionDescription);
+}
+
+function onCreateSessionDescriptionError(error) {
+    console.log('Failed to create session description: ' + error.toString());
+}
 
 // peer connection creator
 let createNewPC = (videoElement) => {
@@ -87,7 +95,7 @@ let createNewPC = (videoElement) => {
     pc.onicecandidate = (event) => {
         console.log('icecandidate event: ', event);
         if (event.candidate) {
-            sendMessage({
+            socket.emit('send candidate', {
                 type: 'candidate',
                 label: event.candidate.sdpMLineIndex,
                 id: event.candidate.sdpMid,
@@ -166,24 +174,24 @@ let createNewPC = (videoElement) => {
                     newVideoElement.setAttribute('playsinline', true);
                     remoteVideosWrapper.appendChild(newVideoElement);
 
-                    connections[id] = {
+                    connections[socketId] = {
                         videoElement: newVideoElement,
                         pc: createNewPC(newVideoElement),
                         email: email
                     };
 
-                    socket.emit('peer offer', message);
+                    socket.emit('peer offer');
                 }
             });
 
-            socket.on('peer offer sent', (socketId) => {
+            socket.on('peer offer sent', (socketId, message) => {
                 let pc = connections[socketId].pc
                 pc.addStream(localStream);
-                isStarted = true;
-                console.log('isInitiator', isInitiator);
-                doCall();
-                pc.setRemoteDescription(new RTCSessionDescription(message)); // TODO message
-                socket.emit('send answer', socket.id);
+                pc.setRemoteDescription(new RTCSessionDescription(message));
+                pc.createAnswer().then(
+                    setLocalAndSendMessage,
+                    onCreateSessionDescriptionError
+                );
             });
 
             socket.on('answer sent', (socketId) => {
@@ -198,12 +206,11 @@ let createNewPC = (videoElement) => {
                 connections[socketId].pc.addIceCandidate(candidate);
             });
 
-            socket.on('bye sent', (id) => {
-                let senderEmail = connections[id].email;
-                connections[id].pc.close();
-                connections[id].pc.null;
-                connections[id].videoElement.parentNode.removeChild(videoElement);
-                delete connections[id];
+            socket.on('bye sent', (socketId) => {
+                let senderEmail = connections[socketId].email;
+                connections[socketId].pc.close();
+                connections[socketId].videoElement.parentNode.removeChild(videoElement);
+                delete connections[socketId];
 
                 chatMessageListWrapperElement.classList.remove('hidden');
                 let newMessageListItemElement = document.createElement("li");
@@ -222,7 +229,7 @@ let createNewPC = (videoElement) => {
             // element listeners
                 // on before unload
                 window.onbeforeunload = () => {
-                    socket.emit('send metadata', 'bye', roomName);
+                    socket.emit('send metadata', 'bye', currentRoom);
                 };
 
                 // enter button listeners on input to trigger attached buttons
