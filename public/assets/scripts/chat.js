@@ -1,6 +1,38 @@
+// setting STUN
+var pcConfig = {
+  'iceServers': [{
+    'urls': 'stun:stun.l.google.com:19302'
+  }]
+};
+
+// setting TURN
+if (location.hostname !== 'localhost') {
+  // TODO provide OWN stable TURN server in pc config and remove
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      var turnServer = JSON.parse(xhr.responseText);
+      console.log('Got TURN server: ', turnServer);
+      pcConfig.iceServers.push({
+        'urls': 'turn:' + turnServer.username + '@' + turnServer.turn,
+        'credential': turnServer.password
+      });
+      turnReady = true;
+    }
+  };
+  xhr.open('GET', 'https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913', true);
+  xhr.send();
+}
 
 // variables
 let currentRoom = '';
+var isChannelReady = false;
+var isInitiator = false;
+var isStarted = false;
+var localStream;
+var pc;
+var remoteStream;
+var turnReady;
 var socket = io.connect('http://localhost'); // TODO change on deploy
 
 // login persistence
@@ -13,6 +45,10 @@ var socket = io.connect('http://localhost'); // TODO change on deploy
     localStorage.setItem('kansas-email', email);
 
 // element hooks
+    // videos
+    var localVideo = document.querySelector('[data-kc-videos__local--video]');
+    var remoteVideosWrapper = document.querySelector('[data-kc-videos__remote]');
+
     // inside room
     let leaveRoomButtonWrapperElement = document.querySelector('[data-kc-navigation__toolbar--left-span]');
     let leaveRoomButtonElement = document.querySelector('[data-kc-leave-room-button]');
@@ -33,7 +69,28 @@ var socket = io.connect('http://localhost'); // TODO change on deploy
     // logout
     let logoutButtonElement = document.querySelector('[data-kc-logout--button]');
 
+// setting user media
+navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: true
+}).then((stream) => {
+    console.log('Adding local stream.');
+    localStream = stream;
+    localVideo.srcObject = stream;
+    sendMessage('got user media');
+    if (isInitiator) {
+        maybeStart();
+    }
+}).catch(function(e) {
+    console.log('getUserMedia() error: ' + e.name);
+});
+
 // listeners
+    // on before unload
+    window.onbeforeunload = function() {
+        sendMessage(roomName, 'bye');
+    };
+
     // logout
     logoutButtonElement.addEventListener('submit', () => {
         localStorage.removeItem('kansas-jwt');
@@ -123,5 +180,11 @@ var socket = io.connect('http://localhost'); // TODO change on deploy
                     leaveRoomButtonElement.addEventListener('click', () => {
                         socket.emit('leave room', currentRoom);
                     });
+
+            // TODO webRTC distribution
+            function sendMessage(message) {
+                console.log('Client sending message: ', message);
+                socket.emit('message', roomName, message);
+            }
         });
     });
