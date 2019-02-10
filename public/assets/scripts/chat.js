@@ -26,6 +26,7 @@ if (location.hostname !== 'localhost') {
 // variables
 let currentRoom = '';
 let connections = {};
+let mySocketId = '';
 
 let isChannelReady = false;
 let isInitiator = false;
@@ -126,6 +127,10 @@ let createNewPC = (videoElement) => {
     socket.on('connect', () => {
         socket.emit('authentication', { email: email, jwt: jwt });
         socket.on('authenticated', () => {
+            socket.on('id sent', (socketId) => {
+                mySocketId = socketId;
+            });
+
             socket.on('message sent', (message, senderEmail) => {
                 // create li, then sender & message spans, add styles, append ul>li>spans, scroll to last
                 chatMessageListWrapperElement.classList.remove('hidden');
@@ -168,7 +173,7 @@ let createNewPC = (videoElement) => {
             });
 
             socket.on('new peer joined', (socketId, email) => {
-                if (socketId !== socket.id) {
+                if (socketId !== mySocketId) {
                     let newVideoElement = document.createElement('video')
                     newVideoElement.setAttribute('autoplay', true);
                     newVideoElement.setAttribute('playsinline', true);

@@ -139,6 +139,8 @@ let prompt = require('./services/prompt');
     let postAuthenticate = (socket, data) => {
         let email = data.email;
 
+        socket.emit('id sent', socket.id);
+
         User.findOne({ email: email }, (err, user) => {
             socket.client.user = user;
             logger(

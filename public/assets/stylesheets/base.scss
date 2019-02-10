@@ -114,13 +114,13 @@ html {
                     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.5);
                     width: 100%;
                     display: block;
-        
+
                     &:active, &.active, &.disabled, &[disabled] {
                         background-color: #e6e6e6;
                         filter: none;
                         background-color: #4a77d4;
                     }
-        
+
                     &:hover {
                         background-position: 0 -15px;
                         -webkit-transition: background-position 0.1s linear;
@@ -203,13 +203,13 @@ html {
                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.5);
                 width: 100%;
                 display: block;
-    
+
                 &:active, &.active, &.disabled, &[disabled] {
                     background-color: #e6e6e6;
                     filter: none;
                     background-color: #4a77d4;
                 }
-    
+
                 &:hover {
                     background-position: 0 -15px;
                     -webkit-transition: background-position 0.1s linear;
