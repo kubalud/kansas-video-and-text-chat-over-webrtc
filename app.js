@@ -169,50 +169,20 @@ let prompt = require('./services/prompt');
     });
 
     io.on('connection', (socket) => {
-        socket.on('enter room', (name) => {
-            socket.join(name);
-            socket.emit('room entered', (name));
+        socket.on('enter room', (roomName) => {
+            socket.join(roomName);
+            socket.emit('room entered', roomName);
+            io.to(roomName).emit('new peer joined', socket.id, socket.client.user.email);
         });
 
-        socket.on('leave room', (name) => {
-            socket.leave(name);
-            socket.emit('room left', (name));
+        socket.on('leave room', (roomName) => {
+            socket.leave(roomName);
+            socket.emit('room left', roomName);
         });
 
         socket.on('send message', (roomName, msg) => {
             if (msg) {
                 io.to(roomName).emit('message sent', msg, socket.client.user.email);
-            }
-        });
-
-        function log() {
-            var array = ['Message from server:'];
-            array.push.apply(array, arguments);
-            socket.emit('log', array);
-        }
-
-        socket.on('message', (roomName, message) => {
-            log('Client said: ', message);
-            io.to(roomName).emit('message', message);
-        });
-
-        socket.on('create or join', function(room) {
-            log('Received request to create or join room ' + room);
-
-            var clientsInRoom = io.sockets.adapter.rooms[room];
-            var numClients = clientsInRoom ? Object.keys(clientsInRoom.sockets).length : 0;
-            log('Room ' + room + ' now has ' + numClients + ' client(s)');
-
-            if (numClients === 0) {
-                socket.join(room);
-                log('Client ID ' + socket.id + ' created room ' + room);
-                socket.emit('created', room, socket.id);
-            } else if (numClients === 1) {
-                log('Client ID ' + socket.id + ' joined room ' + room);
-                io.sockets.in(room).emit('join', room);
-                socket.join(room);
-                socket.emit('joined', room, socket.id);
-                io.sockets.in(room).emit('ready');
             }
         });
 
@@ -227,8 +197,10 @@ let prompt = require('./services/prompt');
             }
         });
 
-        socket.on('bye', function(){
-            console.log('received bye');
+        socket.on('send metadata', (body, roomName) => {
+            if (body === 'bye') {
+                io.to(roomName).emit('bye sent', socket.id);
+            }
         });
     });
 

@@ -7,7 +7,6 @@ var pcConfig = {
 
 // setting TURN
 if (location.hostname !== 'localhost') {
-  // TODO provide OWN stable TURN server in pc config and remove
   var xhr = new XMLHttpRequest();
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4 && xhr.status === 200) {
@@ -26,13 +25,14 @@ if (location.hostname !== 'localhost') {
 
 // variables
 let currentRoom = '';
+let connections = {};
+
 var isChannelReady = false;
 var isInitiator = false;
 var isStarted = false;
 var localStream;
-var pc;
-var remoteStream;
 var turnReady;
+
 var socket = io.connect('http://localhost'); // TODO change on deploy
 
 // login persistence
@@ -77,20 +77,36 @@ navigator.mediaDevices.getUserMedia({
     console.log('Adding local stream.');
     localStream = stream;
     localVideo.srcObject = stream;
-    sendMessage('got user media');
-    if (isInitiator) {
-        maybeStart();
-    }
 }).catch(function(e) {
     console.log('getUserMedia() error: ' + e.name);
 });
 
-// listeners
-    // on before unload
-    window.onbeforeunload = function() {
-        sendMessage(roomName, 'bye');
+// peer connection creator
+let createNewPC = (videoElement) => {
+    pc = new RTCPeerConnection(null);
+    pc.onicecandidate = (event) => {
+        console.log('icecandidate event: ', event);
+        if (event.candidate) {
+            sendMessage({
+                type: 'candidate',
+                label: event.candidate.sdpMLineIndex,
+                id: event.candidate.sdpMid,
+                candidate: event.candidate.candidate
+            });
+        } else {
+        console.log('End of candidates.');
+        }
     };
+    pc.onaddstream = (event) => {
+        videoElement.srcObject = event.stream;
+    };
+    pc.onremovestream = (event) => {
+        console.log('Remote stream removed. Event: ', event);
+    };
+    return pc;
+}
 
+// listeners
     // logout
     logoutButtonElement.addEventListener('submit', () => {
         localStorage.removeItem('kansas-jwt');
@@ -143,7 +159,72 @@ navigator.mediaDevices.getUserMedia({
                 chatMessageListElement.innerHTML = ''; // delete chat messages
             });
 
+            socket.on('new peer joined', (socketId, email) => {
+                if (socketId !== socket.id) {
+                    let newVideoElement = document.createElement('video')
+                    newVideoElement.setAttribute('autoplay', true);
+                    newVideoElement.setAttribute('playsinline', true);
+                    remoteVideosWrapper.appendChild(newVideoElement);
+
+                    connections[id] = {
+                        videoElement: newVideoElement,
+                        pc: createNewPC(newVideoElement),
+                        email: email
+                    };
+
+                    socket.emit('peer offer', message);
+                }
+            });
+
+            socket.on('peer offer sent', (socketId) => {
+                let pc = connections[socketId].pc
+                pc.addStream(localStream);
+                isStarted = true;
+                console.log('isInitiator', isInitiator);
+                doCall();
+                pc.setRemoteDescription(new RTCSessionDescription(message)); // TODO message
+                socket.emit('send answer', socket.id);
+            });
+
+            socket.on('answer sent', (socketId) => {
+                connections[socketId].pc.setRemoteDescription(new RTCSessionDescription(message));// TODO message
+            });
+
+            socket.on('candidate sent', (socketId, message) => {
+                var candidate = new RTCIceCandidate({
+                    sdpMLineIndex: message.label,
+                    candidate: message.candidate
+                });
+                connections[socketId].pc.addIceCandidate(candidate);
+            });
+
+            socket.on('bye sent', (id) => {
+                let senderEmail = connections[id].email;
+                connections[id].pc.close();
+                connections[id].pc.null;
+                connections[id].videoElement.parentNode.removeChild(videoElement);
+                delete connections[id];
+
+                chatMessageListWrapperElement.classList.remove('hidden');
+                let newMessageListItemElement = document.createElement("li");
+
+                let infoElement = document.createElement('span');
+                infoElement.innerHTML = `${senderEmail} left the room.`;
+                infoElement.style['color'] = '#ff0000';
+                infoElement.style['opacity'] = '0.5';
+
+                newMessageListItemElement.appendChild(infoElement);
+
+                chatMessageListElement.appendChild(newMessageListItemElement);
+                chatMessageListElement.scrollTo(0, chatMessageListElement.scrollHeight);
+            });
+
             // element listeners
+                // on before unload
+                window.onbeforeunload = () => {
+                    socket.emit('send metadata', 'bye', roomName);
+                };
+
                 // enter button listeners on input to trigger attached buttons
                     // chat message
                     chatMessageInputElement.addEventListener('keydown', (e) => {
@@ -180,11 +261,5 @@ navigator.mediaDevices.getUserMedia({
                     leaveRoomButtonElement.addEventListener('click', () => {
                         socket.emit('leave room', currentRoom);
                     });
-
-            // TODO webRTC distribution
-            function sendMessage(message) {
-                console.log('Client sending message: ', message);
-                socket.emit('message', roomName, message);
-            }
         });
     });
