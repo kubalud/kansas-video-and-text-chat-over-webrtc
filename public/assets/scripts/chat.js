@@ -1,16 +1,34 @@
-class PeerReference {
-    createNewPC(videoElement, socketId) {
-        pc = new RTCPeerConnection(null);
+let displayNewMessage = (email, message) => {
+    chatMessageListWrapperElement.classList.remove('hidden');
+    let newMessageListItemElement = document.createElement("li");
 
-        // sendChannel = pc.createDataChannel('sendDataChannel', null);
-        // sendChannel.onopen = onSendChannelStateChange;
-        // sendChannel.onclose = onSendChannelStateChange;
-        // pc.ondatachannel = (event) => {
-        //     receiveChannel = event.channel;
-        //     receiveChannel.onmessage = onReceiveMessageCallback;
-        //     receiveChannel.onopen = onReceiveChannelStateChange;
-        //     receiveChannel.onclose = onReceiveChannelStateChange;
-        // };
+    let sendingUserEmailElement = document.createElement('span');
+    sendingUserEmailElement.innerHTML = `${email}: `;
+    sendingUserEmailElement.style['opacity'] = '0.5';
+
+    let messageElement = document.createElement('span');
+    messageElement.innerHTML = message;
+    messageElement.style['word-wrap'] = 'break-word';
+
+    newMessageListItemElement.appendChild(sendingUserEmailElement);
+    newMessageListItemElement.appendChild(messageElement);
+
+    chatMessageListElement.appendChild(newMessageListItemElement);
+    chatMessageListElement.scrollTo(0, chatMessageListElement.scrollHeight);
+}
+
+class PeerReference {
+    onReceiveMessageCallback(event) {
+        let data = JSON.parse(event.data);
+        displayNewMessage(data.email, data.message);
+    }
+
+    createNewPC(videoElement, socketId) {
+        let pc = new RTCPeerConnection(null);
+        pc.ondatachannel = (event) => {
+            this.receiveChannel = event.channel;
+            this.receiveChannel.onmessage = this.onReceiveMessageCallback;
+        };
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('send candidate', {
@@ -39,14 +57,14 @@ class PeerReference {
     };
 
     constructor(socketId) {
-        let newVideoElement = createNewVideoElement();
-        let peerReference = {};
-        let pc = createNewPC(newVideoElement, socketId);
+        let newVideoElement = this.createNewVideoElement();
+        let pc = this.createNewPC(newVideoElement, socketId);
         pc.addStream(localStream);
-        peerReference.videoElement = newVideoElement;
-        peerReference.pc = pc;
-        peerReference.email = email;
-        return peerReference;
+
+        this.videoElement = newVideoElement;
+        this.pc = pc;
+        this.email = email;
+        this.sendChannel = pc.createDataChannel('sendDataChannel', null);
     };
 }
 
@@ -155,22 +173,6 @@ socket.on('connect', () => {
 
         socket.on('message sent', (message, senderEmail) => {
             // create li, then sender & message spans, add styles, append ul>li>spans, scroll to last
-            chatMessageListWrapperElement.classList.remove('hidden');
-            let newMessageListItemElement = document.createElement("li");
-
-            let sendingUserEmailElement = document.createElement('span');
-            sendingUserEmailElement.innerHTML = `${senderEmail}: `;
-            sendingUserEmailElement.style['opacity'] = '0.5';
-
-            let messageElement = document.createElement('span');
-            messageElement.innerHTML = message;
-            messageElement.style['word-wrap'] = 'break-word';
-
-            newMessageListItemElement.appendChild(sendingUserEmailElement);
-            newMessageListItemElement.appendChild(messageElement);
-
-            chatMessageListElement.appendChild(newMessageListItemElement);
-            chatMessageListElement.scrollTo(0, chatMessageListElement.scrollHeight);
         });
 
         socket.on('room entered', (roomName) => {
@@ -216,8 +218,8 @@ socket.on('connect', () => {
                 if (!connections[socketId]) {
                     connections[socketId] = new PeerReference(socketId, email);
                 }
-                connection.pc.createOffer((sessionDescription) => {
-                    connection.pc.setLocalDescription(sessionDescription);
+                connections[socketId].pc.createOffer((sessionDescription) => {
+                    connections[socketId].pc.setLocalDescription(sessionDescription);
                     socket.emit('offer', sessionDescription, socketId);
                 }, handleCreateOfferError);
             }
@@ -230,8 +232,8 @@ socket.on('connect', () => {
         });
 
         socket.on('offered', (message, socketId, email) => {
-            if (!connection[socketId]) {
-                connection[socketId] = new PeerReference(socketId, email);
+            if (!connections[socketId]) {
+                connections[socketId] = new PeerReference(socketId, email);
             }
             connections[socketId].pc.setRemoteDescription(new RTCSessionDescription(message));
             connections[socketId].pc.createAnswer().then(
@@ -256,6 +258,8 @@ socket.on('connect', () => {
             if (socketId !== mySocketId) {
                 let senderEmail = connections[socketId].email;
                 connections[socketId].pc.close();
+                connections[socketId].sendChannel.close();
+                connections[socketId].receiveChannel.close();
                 connections[socketId].videoElement.parentNode.removeChild(
                     connections[socketId].videoElement
                 );
@@ -300,8 +304,16 @@ socket.on('connect', () => {
         // chat message emit
         chatMessageButtonElement.addEventListener('click', () => {
             if (chatMessageInputElement.value) { // empty check
-                socket.emit('send message', currentRoom, chatMessageInputElement.value);
-                chatMessageInputElement.value = ''; // reset
+                for (let socketId in connections) {
+                    if (connections.hasOwnProperty(socketId)) {
+                        connections[socketId].sendChannel.send(JSON.stringify({
+                            message: chatMessageInputElement.value,
+                            email: email
+                        }));
+                    }
+                }
+                displayNewMessage(email, chatMessageInputElement.value);
+                chatMessageInputElement.value = '';
             }
         });
 
